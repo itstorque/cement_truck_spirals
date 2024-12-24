@@ -2,7 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>PlotlyJS Cone Projection</title>
+    <title>Cement Truck Spirals</title>
+    <link rel="icon" type="image/png" href="icons/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="icons/favicon.svg" />
+    <link rel="shortcut icon" href="icons/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Cement Truck Spirals" />
+    <link rel="manifest" href="site.webmanifest" />
+
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
     <script>
@@ -23,6 +30,7 @@
             
         };
     </script>
+    
     <script
         type="text/javascript" id="MathJax-script" async
         src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
@@ -102,15 +110,15 @@
         <br/>
         <div class="slider-container">
             <div class="slider-label">Length<br/>$L=$ <span id="L-value">20</span> $m$</div>
-            <input type="range" min="10" max="50" value="20" id="L-slider">
+            <input type="range" min="10" max="50" step="0.5" value="20" id="L-slider">
         </div>
         <div class="slider-container">
             <div class="slider-label">Speed<br/>$v=$ <span id="v-value">1</span> $m/s$</div>
-            <input type="range" min="0" max="10" value="3" id="v-slider">
+            <input type="range" min="0" max="10" step="0.2" value="3" id="v-slider">
         </div>
         <div class="slider-container">
             <div class="slider-label"><span>Mixer Rotation Frequency<br/>$\omega=$<span id="omega-value">1</span> $\mathrm{rev}/s$</div>
-            <input type="range" min="0" max="5" step="0.1" value="1" id="omega-slider">
+            <input type="range" min="0" max="1" step="0.01" value="0.2" id="omega-slider">
         </div>
         <div class="slider-container">
             <div class="slider-label">Simulation Time<br/>$T_{end}=$ <span id="Tend-value">20</span> $s$</div>
@@ -171,10 +179,13 @@ function coneProjection(h, Rs, r, phi) {
     return projections;
 }
 
-function generate_data(Rs, thetaOffsets, phi, L = 20, v = 1.0, omega = 1.0, Tend = 20.0, dt = 0.1) {
+function generate_data(Rs, thetaOffsets, phi, L = 20, v = 1.0, omega = 1.0, Tend = 20.0, dt = NaN) {
     // const r_max = 10; //1.2 * Math.max(...Rs);
     const projections = coneProjection(L, Rs, r_max, phi);
     const numPoints = Rs.length;
+    if (isNaN(dt)) {
+        dt = 1/(30*omega)
+    } 
     const timeSteps = Array.from({ length: Math.floor(Tend / dt) + 1 }, (_, i) => i * dt);
 
     const x = Array.from({ length: timeSteps.length }, () => Array(numPoints).fill(0));
@@ -188,8 +199,8 @@ function generate_data(Rs, thetaOffsets, phi, L = 20, v = 1.0, omega = 1.0, Tend
             const thetaOffset = thetaOffsets[j];
             const xCross = linearInterpolation(L, r_min, 0, r_max, R);
             // console.log(">>", [R, xCross]);
-            const [xRot, yRot] = rotate([R], [xCross * Math.cos(omega * t + thetaOffset)], phi);
-            const zRot = xCross * Math.sin(omega * t + thetaOffset);
+            const [xRot, yRot] = rotate([R], [xCross * Math.cos(2*Math.PI * omega * t + thetaOffset)], phi);
+            const zRot = xCross * Math.sin(2*Math.PI*omega * t + thetaOffset);
 
             x[it][j] = xRot[0] - v * t;
             y[it][j] = yRot[0];
