@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PlotlyJS Cone Projection</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <script>
+        MathJax = {
+            loader: {load: ['[tex]/physics']},
+            tex: {
+                inlineMath: [ ['$', '$'], ['\\(', '\\)'] ],
+                physics: {
+                    italicdiff: false,
+                    arrowdel: false
+                },
+                tags: 'ams',
+                packages: {'[+]': ['physics']},
+            },
+            svg: {
+                fontCache: 'global'
+            }
+            
+        };
+    </script>
+    <script
+        type="text/javascript" id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+    </script>
+    <style>
+        body {
+            /* background-color: #FFEBEE; */
+            /* font-family: 'Pacifico', cursive; */
+            font-family: "Roboto", sans-serif;
+        }
+        h1, h3 {
+            margin-left: 0.75rem;
+        }
+        h3 {
+            font-weight: normal;
+        }
+        p {
+            font-size: 1.5em;
+        }
+        /* #plot1, #plot2 {
+            border: 3px solid #FFCDD2;
+            border-radius: 15px;
+            box-shadow: 3px 3px 10px #E57373;
+        } */
+        .slider-container, .radio-container {
+            margin: 20px;
+            width: 100%;
+            line-height: 1.75em;
+        }
+        .radio-container {
+            font-size: 1.2em;
+            border: 0.1em, black, solid;
+            width: 80%;
+            border-radius: 0.3em;
+            padding: 0.5em;
+            margin-left: 0em;
+        }
+        .slider-container input {
+            width: 80%;
+        }
+        .slider-label {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        .row {
+            display: flex;
+        }
+
+        .slider-column {
+            flex: 20vw;
+            min-width: 35ch;
+        }
+
+        .plot-column {
+            flex: 80vw;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;900&amp;display=swap" rel="preconnect">
+</head>
+<body>
+
+    <div hidden>
+        <style> bo.cement-mixer { width: 200px; height: 200px; } </style> 
+        <svg class="cement-mixer" viewBox="0 0 200 200"> <!-- Body of the mixer -->
+            <rect x="40" y="80" width="120" height="40" fill="#7d7d7d" stroke="#555" stroke-width="2"/> <!-- Drum of the mixer --> 
+            <ellipse cx="150" cy="100" rx="50" ry="30" fill="#ffcc00" stroke="#555" stroke-width="2"/> <!-- Front wheel --> 
+            <circle cx="60" cy="140" r="20" fill="#333" stroke="#111" stroke-width="2"/> <!-- Rear wheel --> 
+            <circle cx="140" cy="140" r="20" fill="#333" stroke="#111" stroke-width="2"/> <!-- Connecting bar --> 
+            <line x1="60" y1="140" x2="140" y2="140" stroke="#555" stroke-width="4"/>
+        </svg>
+    </div>
+
+<div class="row">
+    <div class="slider-column">
+        <h1>Cement Truck<br/>Helix Simulation</h1>
+        <h3>A web tool to simulate the helices of a cement truck. Merry Christmas Teddi! <br/><span style="font-size: 2.5rem">🎄🌀</span></h3>
+        <br/>
+        <div class="slider-container">
+            <div class="slider-label">Length<br/>$L=$ <span id="L-value">20</span> $m$</div>
+            <input type="range" min="10" max="50" value="20" id="L-slider">
+        </div>
+        <div class="slider-container">
+            <div class="slider-label">Speed<br/>$v=$ <span id="v-value">1</span> $m/s$</div>
+            <input type="range" min="0" max="10" value="3" id="v-slider">
+        </div>
+        <div class="slider-container">
+            <div class="slider-label"><span>Mixer Rotation Frequency<br/>$\omega=$<span id="omega-value">1</span> $\mathrm{rev}/s$</div>
+            <input type="range" min="0" max="5" step="0.1" value="1" id="omega-slider">
+        </div>
+        <div class="slider-container">
+            <div class="slider-label">Simulation Time<br/>$T_{end}=$ <span id="Tend-value">20</span> $s$</div>
+            <input type="range" min="10" max="50" value="20" id="Tend-slider">
+        </div>
+        <div class="slider-container">
+            <div class="slider-label">Mixer Angle<br/>$\phi=$ <span id="phi-value">-0.15</span>$\pi$</div>
+            <input type="range" min="-0.5" max="0.5" step="0.01" value="-0.15" id="phi-slider">
+        </div>
+
+        <p style="width: 80%">Click on the truck in the top plot to set the location of a point!</p>
+        <div class="radio-container">
+            Change Location of:
+            <form>
+                <input type="radio" id="point_sel_1" name="point_sel" value="1" checked>
+                <label for="point_sel_1">Point 1</label><br>
+                <input type="radio" id="point_sel_2" name="point_sel" value="2">
+                <label for="point_sel_2">Point 2</label><br>
+            </form>
+
+        </div>
+    </div>
+    <div class="plot-column">
+        <div id="plot1" style="width: 100%; height: 50vh; display: inline-block;"></div>
+        <div id="plot2" style="width: 100%; height: 50vh; display: inline-block;"></div>
+    </div>
+  </div>
+
+<script>
+function linearInterpolation(x1, y1, x2, y2, x) {
+    return y1 + (y2 - y1) * (x - x1) / (x2 - x1);
+}
+
+function rotate(x, y, phi) {
+    const xRot = x.map((xi, i) => xi * Math.cos(phi) - y[i] * Math.sin(phi));
+    const yRot = x.map((xi, i) => xi * Math.sin(phi) + y[i] * Math.cos(phi));
+    return [xRot, yRot];
+}
+
+const r_max = 10
+const r_min = 5;
+
+function coneProjection(h, Rs, r, phi) {
+    // const maxR = r;//Math.max(...Rs);
+    // const r = 1.2 * maxR;
+
+    const projections = Rs.map(R => {
+        const xCross = linearInterpolation(h, r_min, 0, r_max, R);
+        const [x1, y1] = rotate([0.0, h], [r_max, r_min], phi);
+        const [x2, y2] = rotate([0.0, h], [-r_max, -r_min], phi);
+        const [x3, y3] = rotate([0, 0], [-r_max, r_max], phi);
+        const [x4, y4] = rotate([h, h], [-r_min, r_min], phi);
+        const [x5, y5] = rotate([R], [xCross], phi);
+
+        return { x1, y1, x2, y2, x3, y3, x4, y4, x5, y5 };
+    });
+
+    return projections;
+}
+
+function generate_data(Rs, thetaOffsets, phi, L = 20, v = 1.0, omega = 1.0, Tend = 20.0, dt = 0.1) {
+    // const r_max = 10; //1.2 * Math.max(...Rs);
+    const projections = coneProjection(L, Rs, r_max, phi);
+    const numPoints = Rs.length;
+    const timeSteps = Array.from({ length: Math.floor(Tend / dt) + 1 }, (_, i) => i * dt);
+
+    const x = Array.from({ length: timeSteps.length }, () => Array(numPoints).fill(0));
+    const y = Array.from({ length: timeSteps.length }, () => Array(numPoints).fill(0));
+    const z = Array.from({ length: timeSteps.length }, () => Array(numPoints).fill(0));
+
+    for (let it = 0; it < timeSteps.length; it++) {
+        const t = timeSteps[it];
+        for (let j = 0; j < numPoints; j++) {
+            const R = Rs[j];
+            const thetaOffset = thetaOffsets[j];
+            const xCross = linearInterpolation(L, r_min, 0, r_max, R);
+            // console.log(">>", [R, xCross]);
+            const [xRot, yRot] = rotate([R], [xCross * Math.cos(omega * t + thetaOffset)], phi);
+            const zRot = xCross * Math.sin(omega * t + thetaOffset);
+
+            x[it][j] = xRot[0] - v * t;
+            y[it][j] = yRot[0];
+            z[it][j] = zRot;
+        }
+    }
+
+    colors = ['#23b7e5', "blue"]
+
+    const tracesXY = projections.flatMap((proj, j) => {
+        // const trace1 = {
+        //     x: proj.x1, y: proj.y1, type: 'scatter', mode: 'lines', name: `Truck Base ${j + 1}`
+        // };
+        // const trace2 = { x: proj.x2, y: proj.y2, type: 'scatter', mode: 'lines', showlegend: false };
+        // const trace3 = { x: proj.x3, y: proj.y3, type: 'scatter', mode: 'lines', showlegend: false };
+        // const trace4 = { x: proj.x4, y: proj.y4, type: 'scatter', mode: 'lines', showlegend: false };
+        // const trace5 = { x: proj.x5, y: proj.y5, type: 'scatter', mode: 'markers', showlegend: false };
+
+        const xyTrace = { x: x.map(row => row[j]), y: y.map(row => row[j]), type: 'scatter', mode: 'lines', name: "", marker: { color: colors[j] }, showlegend: false };
+        const xyScatter = { x: [x.map(row => row[j])[0]], y: [y.map(row => row[j])[0]], type: 'scatter', mode: 'markers', name: `Point ${j + 1}`, marker: { color: colors[j] } };
+
+        return [xyTrace, xyScatter];//, trace1, trace2, trace3, trace4]; // trace1, trace2, trace3, trace4, 
+    });
+
+    const tracesYZ = projections.flatMap((proj, j) => {
+        const yzTrace = { x: x.map(row => row[j]), y: z.map(row => row[j]), z: y.map(row => row[j]), type: 'scatter3d', mode: 'lines', showlegend: false, marker: { color: colors[j] }, showlegend: false };
+        const yzPoints = { x: [x.map(row => row[j])[x.length - 1]], y: [z.map(row => row[j])[x.length - 1]], z: [y.map(row => row[j])[x.length - 1]], type: 'scatter3d', mode: 'markers', showlegend: false, marker: { color: colors[j] } };
+        return [yzTrace, yzPoints];
+    });
+
+    wheel_pos_x = 0
+    second_wheel_x_shift=L*0.9
+    rad = (L*0.1)**0.5
+    wheel_pos_y = -L/5 + Math.min(Math.min(...projections[0].y1), Math.min(...projections[0].y2), Math.min(...projections[0].y3), Math.min(...projections[0].y4));
+    console.log(wheel_pos_y)
+
+    truck_path = [
+        // `M ${projections[0].x1[0]} ${projections[0].y1[0]} L ${projections[0].x1[1]} ${projections[0].y1[1]} L 20 20 Z`
+        `M ${projections[0].x1[0]} ${projections[0].y1[0]} L ${projections[0].x4[1]} ${projections[0].y4[1]} L ${projections[0].x2[1]} ${projections[0].y2[1]}  L ${projections[0].x3[0]} ${projections[0].y3[0]} Z`,
+        [wheel_pos_x+rad, wheel_pos_y - rad, wheel_pos_x-rad, wheel_pos_y + rad],
+        [wheel_pos_x+rad+second_wheel_x_shift, wheel_pos_y - rad, wheel_pos_x-rad+second_wheel_x_shift, wheel_pos_y + rad]
+    ]
+    // console.log(truck_path[0])
+    return [tracesXY, tracesYZ, truck_path];
+}
+
+fig1 = 0;
+fig2 = 0;
+
+function plotConeProjection(Rs, thetaOffsets, phi, L = 20, v = 1.0, omega = 1.0, Tend = 20.0, dt = 0.1) {
+
+    traces = generate_data(Rs, thetaOffsets, phi, L, v, omega, Tend, dt);
+
+    // console.log(traces);
+
+    const layoutXY = {
+        title: 'Cone Projection XY',
+        xaxis: { title: 'Position [m]', scaleanchor: 'y', scaleratio: 1  },
+        yaxis: { title: 'Height [m]' },
+        autosize: true,
+
+
+        shapes:   [{
+            type: 'path',
+            path: traces[2][0],
+            fillcolor: 'rgba(241, 196, 15, 0.3)',
+            line: {
+            color: 'rgba(0, 0, 0, 1)'
+            }
+        }, {
+            type: 'circle',
+            xref: 'x',
+            yref: 'y',
+            fillcolor: 'rgba(0, 0, 0, 0.9)',
+            x0: traces[2][1][0],
+            y0: traces[2][1][1],
+            x1: traces[2][1][2],
+            y1: traces[2][1][3],
+            line: {
+                color: 'rgba(0, 0, 0, 1)'
+            }
+        }, {
+            type: 'circle',
+            xref: 'x',
+            yref: 'y',
+            fillcolor: 'rgba(0, 0, 0, 0.9)',
+            x0: traces[2][2][0],
+            y0: traces[2][2][1],
+            x1: traces[2][2][2],
+            y1: traces[2][2][3],
+            line: {
+                color: 'rgba(0, 0, 0, 1)'
+            }
+        }]
+
+    };
+
+    const layoutYZ = {
+        title: '3D View (Click and Drag Me Around)',
+        scene: { xaxis: { title: 'Position [m]', scaleanchor: 'y', scaleratio: 1 }, yaxis: { title: 'Height [m]' }, zaxis: { title: 'Width [m]', scaleanchor: 'y', scaleratio: 1 } }
+    };
+
+    fig1 = Plotly.newPlot('plot1', traces[0], layoutXY, {responsive: true, staticPlot:true}).then(attach);;
+    fig2 = Plotly.newPlot('plot2', traces[1], layoutYZ, {responsive: true});
+}
+
+xCoord1 = 5;
+xCoord2 = 10;
+
+thetaCoord1 = 0;
+thetaCoord2 = 0;
+
+function render() {
+    phi = parseFloat(document.getElementById('phi-slider').value);
+    plotConeProjection([xCoord1, xCoord2], [thetaCoord1, thetaCoord2], Math.PI * phi, parseFloat(document.getElementById('L-slider').value), parseFloat(document.getElementById('v-slider').value), parseFloat(document.getElementById('omega-slider').value), parseFloat(document.getElementById('Tend-slider').value));
+}
+
+function update_plot() {
+    // console.log(xCoord1);
+    phi = parseFloat(document.getElementById('phi-slider').value);
+    traces = generate_data([xCoord1, xCoord2], [thetaCoord1, thetaCoord2], Math.PI * phi, parseFloat(document.getElementById('L-slider').value), parseFloat(document.getElementById('v-slider').value), parseFloat(document.getElementById('omega-slider').value), parseFloat(document.getElementById('Tend-slider').value));
+
+    document.getElementById("plot1").data = traces[0];
+    // console.log(document.getElementById("plot1").layout.shapes[0].path)
+    document.getElementById("plot1").layout.shapes[0].path = traces[2][0];
+
+    document.getElementById("plot1").layout.shapes[1].x0 = traces[2][1][0];
+    document.getElementById("plot1").layout.shapes[1].y0 = traces[2][1][1];
+    document.getElementById("plot1").layout.shapes[1].x1 = traces[2][1][2];
+    document.getElementById("plot1").layout.shapes[1].y1 = traces[2][1][3];
+    
+    document.getElementById("plot1").layout.shapes[2].x0 = traces[2][2][0];
+    document.getElementById("plot1").layout.shapes[2].y0 = traces[2][2][1];
+    document.getElementById("plot1").layout.shapes[2].x1 = traces[2][2][2];
+    document.getElementById("plot1").layout.shapes[2].y1 = traces[2][2][3];
+
+    // new_shapes = [{
+    //         type: 'path',
+    //         path: traces[2][0],
+    //         fillcolor: 'rgba(0, 100, 80, 0.2)',
+    //         line: {
+    //         color: 'rgba(0, 100, 80, 1)'
+    //         }
+    //     }]
+
+    // document.getElementById("plot1").layout.update_layout(title="hi")
+    // fig1.update_layout(shapes=new_shapes)
+    
+    Plotly.redraw("plot1");
+    // Plotly.render("plot1");
+
+    document.getElementById("plot2").data = traces[1];
+    Plotly.redraw("plot2");
+}
+
+function update_param(name) {
+    // const L = parseFloat(this.value);
+    // document.getElementById('L-value').textContent = L;
+    const pval = parseFloat(document.getElementById(name+'-slider').value);
+    document.getElementById(name+'-value').textContent = pval;
+}
+
+var d3 = Plotly.d3;
+
+function attach() {
+    var gd = document.getElementById('plot1');
+  
+  gd.addEventListener('mouseup', function(evt) {
+    var xaxis = gd._fullLayout.xaxis;
+    // console.log(rotated_frame[0], xaxis, evt.x)
+
+    var position = gd.getBoundingClientRect();
+    var plot_left_edge_x = position.left;
+    var plot_left_edge_y = position.top;
+
+
+    var yaxis = gd._fullLayout.yaxis;
+    var l = gd._fullLayout.margin.l;
+    var t = gd._fullLayout.margin.t;
+    var xInDataCoord = xaxis.p2c(evt.x - l - plot_left_edge_x);
+    var yInDataCoord = yaxis.p2c(evt.y - t - plot_left_edge_y);
+    
+    // Plotly.relayout(gd, 'title', ['x: ' + xInDataCoord, 'y : ' + yInDataCoord].join('<br>'));
+
+    maxLallowed = parseFloat(document.getElementById('L-slider').value);
+    // console.log(maxLallowed, Math.max(Math.min(xInDataCoord, maxLallowed*0.99), 0));
+    rotated_frame = rotate([xInDataCoord], [yInDataCoord], -Math.PI * (document.getElementById('phi-slider').value));
+
+    // console.log(rotated_frame[0], xInDataCoord)
+    xCoordSetter = Math.max(Math.min(rotated_frame[0], maxLallowed), 0);
+
+    max_y_allowed = linearInterpolation(maxLallowed, r_min, 0, r_max, xCoordSetter);
+    // console.log(max_y_allowed);
+    yCoordSetter = Math.max(Math.min(rotated_frame[1], max_y_allowed), -max_y_allowed);
+    
+    thetaCoordSetter = - Math.PI / 2 + Math.asin(yCoordSetter / max_y_allowed);
+
+    // console.log("?", thetaCoordSetter);
+
+    if (document.getElementById("point_sel_1").checked) {
+        xCoord1 = xCoordSetter;
+        thetaCoord1 = thetaCoordSetter;
+    }
+
+    if (document.getElementById("point_sel_2").checked) {
+        xCoord2 = xCoordSetter;
+        thetaCoord2 = thetaCoordSetter;
+    }
+    // console.log(xCoord1);
+    update_plot();
+
+  });
+}
+
+document.getElementById('L-slider').addEventListener('input', function() {
+    // const L = parseFloat(this.value);
+    // document.getElementById('L-value').textContent = L;
+    // update_plot();
+    update_param('L');
+    update_plot();
+});
+
+document.getElementById('v-slider').addEventListener('input', function() {
+    // const v = parseFloat(this.value);
+    // document.getElementById('v-value').textContent = v;
+    // update_plot();
+    update_param('v');
+    update_plot();
+});
+
+document.getElementById('omega-slider').addEventListener('input', function() {
+    // const omega = parseFloat(this.value);
+    // document.getElementById('omega-value').textContent = omega;
+    // update_plot();
+    update_param('omega');
+    update_plot();
+});
+
+document.getElementById('Tend-slider').addEventListener('input', function() {
+    // const Tend = parseFloat(this.value);
+    // document.getElementById('Tend-value').textContent = Tend;
+    // update_plot();
+    update_param('Tend');
+    update_plot();
+});
+
+document.getElementById('phi-slider').addEventListener('input', function() {
+    // const Tend = parseFloat(this.value);
+    // document.getElementById('Tend-value').textContent = Tend;
+    // update_plot();
+    update_param('phi');
+    update_plot();
+});
+
+
+update_param("L");
+update_param("v");
+update_param("omega");
+update_param("Tend");
+update_param("phi");
+render();
+// plotConeProjection([10, 5], [0 * Math.PI, 0.2 * Math.PI], 0 * Math.PI / 6, 20, 10, 1, 20);
+</script>
+</body>
+</html>
