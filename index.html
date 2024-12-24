@@ -184,7 +184,11 @@ function generate_data(Rs, thetaOffsets, phi, L = 20, v = 1.0, omega = 1.0, Tend
     const projections = coneProjection(L, Rs, r_max, phi);
     const numPoints = Rs.length;
     if (isNaN(dt)) {
-        dt = 1/(30*omega)
+        if (omega > 0.1) {
+            dt = 1/(30*omega)
+        } else {
+            dt = 0.1
+        }
     } 
     const timeSteps = Array.from({ length: Math.floor(Tend / dt) + 1 }, (_, i) => i * dt);
 
