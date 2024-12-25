@@ -40,6 +40,9 @@
             /* background-color: #FFEBEE; */
             /* font-family: 'Pacifico', cursive; */
             font-family: "Roboto", sans-serif;
+            font-size: 0.9em;
+            overflow-y: hidden;
+            margin: 0;
         }
         h1, h3 {
             margin-left: 0.75rem;
@@ -56,7 +59,7 @@
             box-shadow: 3px 3px 10px #E57373;
         } */
         .slider-container, .radio-container {
-            margin: 20px;
+            margin-right: 5%;
             width: 100%;
             line-height: 1.75em;
         }
@@ -69,7 +72,8 @@
             margin-left: 0em;
         }
         .slider-container input {
-            width: 80%;
+            width: 90%;
+            margin: 0 5% 5% 5%;
         }
         .slider-label {
             font-size: 20px;
@@ -82,11 +86,23 @@
         .slider-column {
             flex: 20vw;
             min-width: 35ch;
+            height: 100vh;
+            overflow-y: scroll;
+            overflow-x: hidden;
+            padding: 0.5em;
+            padding-right: 1em;
+            background-color: #cdebff;
+            margin-left: 0;
+            accent-color: #09457c;
         }
 
         .plot-column {
             flex: 80vw;
         }
+/* 
+        #plot1, #plot2 {
+            position: fixed;
+        } */
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;900&amp;display=swap" rel="preconnect">
 </head>
@@ -304,7 +320,15 @@ function plotConeProjection(Rs, thetaOffsets, phi, L = 20, v = 1.0, omega = 1.0,
 
     const layoutYZ = {
         title: '3D View (Click and Drag Me Around)',
-        scene: { xaxis: { title: 'Position [m]', scaleanchor: 'y', scaleratio: 1 }, yaxis: { title: 'Height [m]' }, zaxis: { title: 'Width [m]', scaleanchor: 'y', scaleratio: 1 } }
+        scene: { xaxis: { title: 'Position [m]', scaleanchor: 'y', scaleratio: 1 }, yaxis: { title: 'Height [m]' }, zaxis: { title: 'Width [m]', scaleanchor: 'y', scaleratio: 1 } },
+        margin: {
+            l: 0,
+            r: 0,
+            b: 10,
+            t: 50
+        },
+        
+
     };
 
     fig1 = Plotly.newPlot('plot1', traces[0], layoutXY, {responsive: true, staticPlot:true}).then(attach);;
